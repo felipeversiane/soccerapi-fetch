@@ -2,9 +2,10 @@
 let currentPage = 1;
 let totalPages = 1;
 let championships = [];
-let teams = [];
 
 // Functions 
+
+
 const addChampionship = (id, name, country) => {
   const existingChampionship = championships.find(championship => championship.name === name);
 
@@ -86,7 +87,7 @@ const fetchData = async (page) => {
     const response = await fetch(`https://soccer-football-info.p.rapidapi.com/championships/list/?p=${page}&c=all&l=en_US`, {
       method: 'GET',
       headers: {
-        'X-RapidAPI-Key': 'f43e6e5db1msh46b37900e14ad70p114c77jsnfd8f88b76023',
+        'X-RapidAPI-Key': 'a6d4001f04mshb1b2dfdbb508facp1f0ed0jsn1299de137ebb',
         'X-RapidAPI-Host': 'soccer-football-info.p.rapidapi.com'
       }
     });
@@ -122,89 +123,25 @@ const fetchData = async (page) => {
 };
 
 
+const handleWorkerTask = async (championship) => {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker('./scripts/worker.js');
 
+    worker.postMessage(championship);
 
-// Teams data fetch / VIEW-CHAMPIONSHIPS /
-const getTeamsFromChampionships = async (championships) => {
-  const data = [];
+    worker.onmessage = (e) => {
+      const teamsData = e.data;
+      console.log('Times da Liga:', teamsData);
+      resolve(teamsData);
+    };
 
-  try {
-    const promises = championships.map(async (championship) => {
-      const response = await fetch(`https://soccer-football-info.p.rapidapi.com/championships/view/?i=${championship.id}&l=en_US`, {
-        method: 'GET',
-        headers: {
-          'X-RapidAPI-Key': 'f43e6e5db1msh46b37900e14ad70p114c77jsnfd8f88b76023',
-          'X-RapidAPI-Host': 'soccer-football-info.p.rapidapi.com'
-        }
-      });
-
-      const responseData = await response.json();
-
-      if (responseData.result && responseData.result[0] && responseData.result[0].seasons && responseData.result[0].seasons[0] && responseData.result[0].seasons[0].groups && responseData.result[0].seasons[0].groups[0] && responseData.result[0].seasons[0].groups[0].table) {
-        const table = responseData.result[0].seasons[0].groups[0].table;
-
-        table.forEach(teamInfo => {
-          if (teamInfo.team && teamInfo.team.id) {
-            const teamId = teamInfo.team.id;
-            const teamName = teamInfo.team.name;
-            const teamCountry = responseData.result[0].country;
-            data.push({ teamId, teamName, teamCountry });
-          }
-        });
-      }
-    });
-
-    await Promise.all(promises);
-    return data;
-  } catch (error) {
-    console.error('Erro ao buscar dados das equipes:', error);
-    throw error;
-  }
+    worker.onerror = (error) => {
+      console.error('Erro no worker:', error);
+      reject(error);
+    };
+  });
 };
 
-
-
-
-// Teams score fetch / TEAM-HISTORY /
-const getTeamsScore = async (teamsData) => {
-  const data = [];
-
-  try {
-    const promises = teamsData.map(async (team) => {
-      const response = await fetch(`https://soccer-football-info.p.rapidapi.com/teams/history/?i=${team.teamId}&l=en_US`, {
-        method: 'GET',
-        headers: {
-          'X-RapidAPI-Key': 'f43e6e5db1msh46b37900e14ad70p114c77jsnfd8f88b76023',
-          'X-RapidAPI-Host': 'soccer-football-info.p.rapidapi.com'
-        }
-      });
-
-      const responseData = await response.json();
-
-      if (responseData.result && responseData.result[0] && responseData.result[0].matches) {
-        const matches = responseData.result[0].matches;
-
-        let golsScored = 0;
-        let golsConceded = 0;
-
-        matches.forEach(matchInfo => {
-          if (matchInfo.teamA && matchInfo.teamB) {
-            golsScored += parseInt(matchInfo.teamA.score);
-            golsConceded += parseInt(matchInfo.teamB.score);
-          }
-        });
-
-        data.push({ golsScored, golsConceded });
-      }
-    });
-
-    await Promise.all(promises);
-    return data;
-  } catch (error) {
-    console.error('Erro ao buscar dados da pontuação das equipes:', error);
-    throw error;
-  }
-};
 
 
 
@@ -236,15 +173,26 @@ $(document).ready(() => {
     
     $('#searchButton').on('click', async function () {
       try {
-        const teamsData = await getTeamsFromChampionships(championships);
-        console.log('Dados das Equipes:', teamsData);
-
-        const teamsScore = await getTeamsScore(teamsData);
-        console.log('Pontuação das Equipes:', teamsScore);
+        const allTeamsData = [];
+        const workerPromises = [];
+    
+        for (const championship of championships) {
+          const promise = handleWorkerTask(championship)
+            .then(teamsData => {
+              allTeamsData.push(...teamsData);
+            })
+            .catch(error => {
+              console.error('Erro ao buscar dados das equipes:', error);
+            });
+    
+          workerPromises.push(promise);
+        }
+    
+        await Promise.all(workerPromises);
+        console.log('Dados de Todos os Times:', allTeamsData);
       } catch (error) {
         console.error('Erro ao buscar dados das equipes:', error);
       }
     });
-  
     
   });
