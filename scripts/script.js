@@ -170,7 +170,7 @@ const getTeamsScore = async (teamsData) => {
   const data = [];
 
   try {
-    const promises = teamsData.map(async (team) => {
+    for (const team of teamsData) {
       const response = await fetch(`https://soccer-football-info.p.rapidapi.com/teams/history/?i=${team.teamId}&l=en_US`, {
         method: 'GET',
         headers: {
@@ -196,15 +196,18 @@ const getTeamsScore = async (teamsData) => {
 
         data.push({ golsScored, golsConceded });
       }
-    });
 
-    await Promise.all(promises);
+      // Aguardar 1 segundo antes da próxima solicitação
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+
     return data;
   } catch (error) {
     console.error('Erro ao buscar dados da pontuação das equipes:', error);
     throw error;
   }
 };
+
 
 
 
