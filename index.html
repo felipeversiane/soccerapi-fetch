@@ -5,14 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SoccerAPI-Fetch</title>
+
+    <!-- Links and scripts ... -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
         integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="./scripts/fetch.js"></script>
-    <script src="./scripts/showButton.js"></script>
+    <script src="./scripts/script.js"></script>
     <link rel="stylesheet" href="./styles/globals.css">
+
 </head>
 
 <body class=" bg-gray-900 w-screen h-screen">
@@ -23,25 +25,28 @@
     </div>
 
     <div class="content flex w-screen h-[80%] mt-4">
+        <!-- Search Box -->
         <div
-            class="search-box bg-gray-700 w-[30rem] h-full ml-20 mr-20 rounded-xl shadow-[#000000] shadow-2xl overflow-auto">
+            class="search-box bg-gray-700 w-[35%] h-full ml-4 mr-4 rounded-xl shadow-[#000000] shadow-2xl overflow-auto">
             <table class="text-white w-full">
                 <thead>
                     <tr class="">
+                        <th class="py-2 text-center">Id</th>
                         <th class="py-2 text-center">Name</th>
                         <th class="py-2 text-center">Country</th>
-                        <th class="py-2 text-center">Select</th>
+                        <th class="py-2 text-center">Add</th>
                     </tr>
+                    <td>
+                        <tr>
+                            <td colspan="4" class="border-t-2 border-gray-400"></td>
+                        </tr>
+                    </td>
                 </thead>
-                <td>
-                    <tr>
-                        <td colspan="3" class="border-t-2 border-gray-600"></td>
-                    </tr>
-                </td>
                 <tbody>
                 </tbody>
             </table>
 
+            <!-- Pagination -->
             <div class=" flex justify-center w-full mt-6 mb-2  px-4">
                 <button id="prevButton"
                     class="px-3 py-1 mr-2 bg-blue-500 text-white rounded focus:outline-none hover:bg-blue-600 active:bg-blue-800">
@@ -56,13 +61,71 @@
             </div>
         </div>
 
-        <button id="searchButton"
-            class="hidden bg-blue-500 text-white px-4 py-2 rounded absolute bottom-5 left-1/2 transform -translate-x-1/2 transition-all duration-300 hover:bg-blue-600 active:bg-blue-800">Search</button>
-        <i class="fa-solid fa-arrow-right mt-[15rem] text-7xl " style="color: #ffffff;"></i>
 
-        <div class="response-box bg-gray-700 w-[30rem] h-full rounded-xl ml-20 mr-20 shadow-[#000000] shadow-2xl">
+        <!-- Middle Box -->
+        <div class="middle-box w-[30%] h-full flex items-center flex-col">
+            <!-- Filter -->
+            <div class="filter w-full h-[50%] flex justify-start items-start flex-col">
+                <div class="">
+                    <label for="rangeInput" class="text-white ">Range:</label>
+                    <br>
+                    <input type="number" id="rangeInput" name="rangeInput" min="0" max="5"
+                        class="bg-gray-700 text-white px-2 py-1 rounded">
+                </div>
+                <br>
+                <div class="">
+                    <input type="checkbox" id="isSumEqual2000" name="isSumEqual2000">
+                    <label for="isSumEqual2000" class="text-white">isSumEqual2000?</label>
+                </div>
 
+            </div>
+            <button id="searchButton"
+                class="hidden bg-blue-500 text-white px-4 py-2 rounded absolute bottom-5 left-1/2 transform -translate-x-1/2 transition-all duration-300 hover:bg-blue-600 active:bg-blue-800">Search</button>
+            <i class="fa-solid fa-arrow-right  text-7xl mb-6 " style="color: #ffffff;"></i>
+            <!-- Tabela Intermediária (Buffer) -->
+            <div
+                class="intermediate-box bg-gray-700 w-full h-full ml-4 mr-4 rounded-xl shadow-[#000000] shadow-2xl overflow-auto">
+                <table class="text-white w-full">
+                    <thead>
+                        <tr class="">
+                            <th class="py-2 text-center">Selected Name</th>
+                            <th class="py-2 text-center">Selected Country</th>
+                            <th class="py-2 text-center">Delete</th>
+                        </tr>
+                        <td>
+                            <tr>
+                                <td colspan="3" class="border-t-2 border-gray-400"></td>
+                            </tr>
+                        </td>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <!-- Response Box -->
+        <div class="response-box bg-gray-700 w-[35%] h-full rounded-xl ml-4 mr-4 shadow-[#000000] shadow-2xl">
+            <table class="text-white w-full">
+                <thead>
+                    <tr class="">
+                        <th class="py-2 text-center">Name</th>
+                        <th class="py-2 text-center">Country</th>
+                        <th class="py-2 text-center">Conceded</th>
+                        <th class="py-2 text-center">Scored</th>
+                    </tr>
+                    <td>
+                        <tr>
+                            <td colspan="4" class="border-t-2 border-gray-400"></td>
+                        </tr>
+                    </td>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+
     </div>
 </body>
 
