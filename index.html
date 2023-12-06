@@ -13,8 +13,6 @@
         crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="./scripts/script.js"></script>
-    <script src="./scripts/fetchWorker.js"></script>
-    <script src="./scripts/clusterWorker.js"></script>
     <link rel="stylesheet" href="./styles/globals.css">
 
 </head>
@@ -68,12 +66,6 @@
         <div class="middle-box w-[30%] h-full flex items-center flex-col">
             <!-- Filter -->
             <div class="filter w-full h-[50%] flex justify-start items-start flex-col">
-                <div class="">
-                    <label for="rangeInput" class="text-white ">Workers:</label>
-                    <br>
-                    <input type="number" id="rangeInput" name="rangeInput" min="0" max="5"
-                        class="bg-gray-700 text-white px-2 py-1 rounded">
-                </div>
                 <br>
                 <div class="">
                     <input type="checkbox" id="isSumEqual2000" name="isSumEqual2000">
@@ -108,7 +100,7 @@
         </div>
 
         <!-- Response Box -->
-        <div class="response-box bg-gray-700 w-[35%] h-full rounded-xl ml-4 mr-4 shadow-[#000000] shadow-2xl">
+        <div class="response-box bg-gray-700 w-[35%] h-full rounded-xl ml-4 mr-4 shadow-[#000000] shadow-2xl overflow-auto">
             <table class="text-white w-full">
                 <thead>
                     <tr class="">
