@@ -3,7 +3,123 @@ let currentPage = 1;
 let totalPages = 1;
 let championships = [];
 let teams = [];
+let numberOfClusters=3; // Você pode ajustar conforme necessário
+const maxIterations = 100; // Número máximo de iterações
 
+
+
+const displayClustersData = (clusters) => {
+  const tbody = $('.response-box tbody');
+  tbody.html('');
+
+  clusters.forEach((cluster, index) => {
+    const separatorRow = $('<tr>').addClass('border-t-2 border-gray-400');
+    const separatorCell = $('<td>').attr('colspan', '4').addClass('py-2 font-bold text-center').text(`Cluster ${index + 1}`);
+    separatorRow.append(separatorCell);
+    tbody.append(separatorRow);
+
+    cluster.forEach(team => {
+      const row = $('<tr>').addClass('hover:bg-gray-500');
+      const nameCell = $('<td>').addClass('py-2 text-center').text(team.teamName);
+      const countryCell = $('<td>').addClass('py-2 text-center').text(team.teamCountry || 'N/A');
+      const concededCell = $('<td>').addClass('py-2 text-center').text(team.golsConceded);
+      const scoredCell = $('<td>').addClass('py-2 text-center').text(team.golsScored);
+
+      row.append(nameCell, countryCell, concededCell, scoredCell);
+      tbody.append(row);
+    });
+  });
+};
+
+
+function euclideanDistance(a, b) {
+  return Math.sqrt(Math.pow(a.golsScored - b.golsScored, 2) + Math.pow(a.golsConceded - b.golsConceded, 2));
+}
+
+function kmeans(data, k, maxIterations) {
+  function getRandomCentroids(data, k) {
+    const centroids = [];
+    const randomIndices = [];
+
+    while (centroids.length < k) {
+      const randomIndex = Math.floor(Math.random() * data.length);
+      if (!randomIndices.includes(randomIndex)) {
+        randomIndices.push(randomIndex);
+        centroids.push(data[randomIndex]);
+      }
+    }
+
+    return centroids;
+  }
+
+  function assignToCluster(point, centroids) {
+    let minDistance = Infinity;
+    let clusterIndex = -1;
+
+    for (let i = 0; i < centroids.length; i++) {
+      const distance = euclideanDistance(point, centroids[i]);
+      if (distance < minDistance) {
+        minDistance = distance;
+        clusterIndex = i;
+      }
+    }
+
+    return clusterIndex;
+  }
+
+  function calculateCentroids(clusters) {
+    const centroids = [];
+    for (let i = 0; i < clusters.length; i++) {
+      let sumGolsScored = 0;
+      let sumGolsConceded = 0;
+
+      for (let j = 0; j < clusters[i].length; j++) {
+        sumGolsScored += clusters[i][j].golsScored;
+        sumGolsConceded += clusters[i][j].golsConceded;
+      }
+
+      centroids.push({
+        golsScored: sumGolsScored / clusters[i].length,
+        golsConceded: sumGolsConceded / clusters[i].length
+      });
+    }
+
+    return centroids;
+  }
+
+  function hasConverged(oldCentroids, newCentroids) {
+    for (let i = 0; i < oldCentroids.length; i++) {
+      if (euclideanDistance(oldCentroids[i], newCentroids[i]) !== 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  let centroids = getRandomCentroids(data, k);
+  let iterations = 0;
+  let clusters = Array.from({ length: k }, () => []);
+
+  while (iterations < maxIterations) {
+    clusters = Array.from({ length: k }, () => []);
+
+    for (let i = 0; i < data.length; i++) {
+      const clusterIndex = assignToCluster(data[i], centroids);
+      clusters[clusterIndex].push(data[i]);
+    }
+
+    const oldCentroids = [...centroids];
+    centroids = calculateCentroids(clusters);
+
+    if (hasConverged(oldCentroids, centroids)) {
+      break;
+    }
+
+    iterations++;
+  }
+
+  return clusters;
+}
 // Functions 
 const addChampionship = (id, name, country) => {
   const existingChampionship = championships.find(championship => championship.name === name);
@@ -122,97 +238,45 @@ const fetchData = async (page) => {
 };
 
 
+const handleWorkerTask = async (championship) => {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker('./scripts/fetchWorker.js');
 
+    worker.postMessage(championship);
 
-// Teams data fetch / VIEW-CHAMPIONSHIPS /
-const getTeamsFromChampionships = async (championships) => {
-  const data = [];
+    worker.onmessage = (e) => {
+      const teamsData = e.data;
+      console.log('Times da Liga:', teamsData);
+      resolve(teamsData);
+    };
 
-  try {
-    const promises = championships.map(async (championship) => {
-      const response = await fetch(`https://soccer-football-info.p.rapidapi.com/championships/view/?i=${championship.id}&l=en_US`, {
-        method: 'GET',
-        headers: {
-          'X-RapidAPI-Key': 'f43e6e5db1msh46b37900e14ad70p114c77jsnfd8f88b76023',
-          'X-RapidAPI-Host': 'soccer-football-info.p.rapidapi.com'
-        }
-      });
-
-      const responseData = await response.json();
-
-      if (responseData.result && responseData.result[0] && responseData.result[0].seasons && responseData.result[0].seasons[0] && responseData.result[0].seasons[0].groups && responseData.result[0].seasons[0].groups[0] && responseData.result[0].seasons[0].groups[0].table) {
-        const table = responseData.result[0].seasons[0].groups[0].table;
-
-        table.forEach(teamInfo => {
-          if (teamInfo.team && teamInfo.team.id) {
-            const teamId = teamInfo.team.id;
-            const teamName = teamInfo.team.name;
-            const teamCountry = responseData.result[0].country;
-            data.push({ teamId, teamName, teamCountry });
-          }
-        });
-      }
-    });
-
-    await Promise.all(promises);
-    return data;
-  } catch (error) {
-    console.error('Erro ao buscar dados das equipes:', error);
-    throw error;
-  }
+    worker.onerror = (error) => {
+      console.error('Erro no worker:', error);
+      reject(error);
+    };
+  });
 };
 
-
-
-
-// Teams score fetch / TEAM-HISTORY /
-const getTeamsScore = async (teamsData) => {
-  const data = [];
-
-  try {
-    for (const team of teamsData) {
-      const response = await fetch(`https://soccer-football-info.p.rapidapi.com/teams/history/?i=${team.teamId}&l=en_US`, {
-        method: 'GET',
-        headers: {
-          'X-RapidAPI-Key': 'f43e6e5db1msh46b37900e14ad70p114c77jsnfd8f88b76023',
-          'X-RapidAPI-Host': 'soccer-football-info.p.rapidapi.com'
-        }
-      });
-
-      const responseData = await response.json();
-
-      if (responseData.result && responseData.result[0] && responseData.result[0].matches) {
-        const matches = responseData.result[0].matches;
-
-        let golsScored = 0;
-        let golsConceded = 0;
-
-        matches.forEach(matchInfo => {
-          if (matchInfo.teamA && matchInfo.teamB) {
-            golsScored += parseInt(matchInfo.teamA.score);
-            golsConceded += parseInt(matchInfo.teamB.score);
-          }
-        });
-
-        data.push({ golsScored, golsConceded });
-      }
-
-      // Aguardar 1 segundo antes da próxima solicitação
-      await new Promise(resolve => setTimeout(resolve, 10));
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Erro ao buscar dados da pontuação das equipes:', error);
-    throw error;
-  }
+const clearResponseTable = () => {
+  const tbody = $('.response-box tbody');
+  tbody.html('');
 };
-
 
 
 
 
 // EVENTS LISTENERS
+$('#rangeInput').on('input', function () {
+  const inputValue = parseInt($(this).val(), 10);
+  
+  
+  const validValue = Math.min(Math.max(inputValue, 1), 6);
+
+ 
+  numberOfClusters = validValue;
+
+  $(this).val(validValue);
+});
 $(document).ready(() => {
     fetchData(currentPage)
       .then(updatePageNumber)
@@ -232,6 +296,7 @@ $(document).ready(() => {
       const name = row.find('td:nth-child(1)').text();
       
       removeChampionship(name);
+      clearResponseTable();
     });
   
     $('#nextButton').on('click', nextPage);
@@ -239,15 +304,30 @@ $(document).ready(() => {
     
     $('#searchButton').on('click', async function () {
       try {
-        const teamsData = await getTeamsFromChampionships(championships);
-        console.log('Dados das Equipes:', teamsData);
-
-        const teamsScore = await getTeamsScore(teamsData);
-        console.log('Pontuação das Equipes:', teamsScore);
+        let allTeamsData = [];  // Array para armazenar todos os dados de todas as ligas
+        const workerPromises = [];
+    
+        for (const championship of championships) {
+          const teamsData = await handleWorkerTask(championship).catch(error => {
+            console.error('Erro ao buscar dados das equipes:', error);
+          });
+    
+          if (teamsData) {
+            allTeamsData.push(teamsData);  // Adiciona os dados da liga atual ao array
+          }
+    
+          workerPromises.push(teamsData);
+        }
+    
+    
+    
+        // Utiliza a variável numberOfClusters como parâmetro em kmeans
+        const clusters = kmeans(allTeamsData.flat(), numberOfClusters, maxIterations);
+        displayClustersData(clusters);
+        console.log(clusters);
       } catch (error) {
         console.error('Erro ao buscar dados das equipes:', error);
       }
     });
-  
     
   });
