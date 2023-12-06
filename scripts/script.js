@@ -8,6 +8,29 @@ const maxIterations = 100; // Número máximo de iterações
 
 
 
+const displayClustersData = (clusters) => {
+  const tbody = $('.response-box tbody');
+  tbody.html('');
+
+  clusters.forEach((cluster, index) => {
+    const separatorRow = $('<tr>').addClass('border-t-2 border-gray-400');
+    const separatorCell = $('<td>').attr('colspan', '4').addClass('py-2 font-bold text-center').text(`Cluster ${index + 1}`);
+    separatorRow.append(separatorCell);
+    tbody.append(separatorRow);
+
+    cluster.forEach(team => {
+      const row = $('<tr>').addClass('hover:bg-gray-500');
+      const nameCell = $('<td>').addClass('py-2 text-center').text(team.teamName);
+      const countryCell = $('<td>').addClass('py-2 text-center').text(team.teamCountry || 'N/A');
+      const concededCell = $('<td>').addClass('py-2 text-center').text(team.golsConceded);
+      const scoredCell = $('<td>').addClass('py-2 text-center').text(team.golsScored);
+
+      row.append(nameCell, countryCell, concededCell, scoredCell);
+      tbody.append(row);
+    });
+  });
+};
+
 
 function euclideanDistance(a, b) {
   return Math.sqrt(Math.pow(a.golsScored - b.golsScored, 2) + Math.pow(a.golsConceded - b.golsConceded, 2));
@@ -217,7 +240,7 @@ const fetchData = async (page) => {
 
 const handleWorkerTask = async (championship) => {
   return new Promise((resolve, reject) => {
-    const worker = new Worker('./scripts/worker.js');
+    const worker = new Worker('./scripts/fetchWorker.js');
 
     worker.postMessage(championship);
 
@@ -282,6 +305,7 @@ $(document).ready(() => {
     
         await Promise.all(workerPromises);
         const clusters = kmeans(allTeamsData, numberOfClusters, maxIterations);
+        displayClustersData(clusters);
         console.log(clusters);
       } catch (error) {
         console.error('Erro ao buscar dados das equipes:', error);

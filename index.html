@@ -13,7 +13,8 @@
         crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="./scripts/script.js"></script>
-    <script src="./scripts/worker.js"></script>
+    <script src="./scripts/fetchWorker.js"></script>
+    <script src="./scripts/clusterWorker.js"></script>
     <link rel="stylesheet" href="./styles/globals.css">
 
 </head>
@@ -68,7 +69,7 @@
             <!-- Filter -->
             <div class="filter w-full h-[50%] flex justify-start items-start flex-col">
                 <div class="">
-                    <label for="rangeInput" class="text-white ">Range:</label>
+                    <label for="rangeInput" class="text-white ">Workers:</label>
                     <br>
                     <input type="number" id="rangeInput" name="rangeInput" min="0" max="5"
                         class="bg-gray-700 text-white px-2 py-1 rounded">
