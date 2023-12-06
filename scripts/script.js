@@ -2,10 +2,102 @@
 let currentPage = 1;
 let totalPages = 1;
 let championships = [];
+let teams = [];
+const numberOfClusters = 3; // Você pode ajustar conforme necessário
+const maxIterations = 100; // Número máximo de iterações
 
+
+
+
+function euclideanDistance(a, b) {
+  return Math.sqrt(Math.pow(a.golsScored - b.golsScored, 2) + Math.pow(a.golsConceded - b.golsConceded, 2));
+}
+
+function kmeans(data, k, maxIterations) {
+  function getRandomCentroids(data, k) {
+    const centroids = [];
+    const randomIndices = [];
+
+    while (centroids.length < k) {
+      const randomIndex = Math.floor(Math.random() * data.length);
+      if (!randomIndices.includes(randomIndex)) {
+        randomIndices.push(randomIndex);
+        centroids.push(data[randomIndex]);
+      }
+    }
+
+    return centroids;
+  }
+
+  function assignToCluster(point, centroids) {
+    let minDistance = Infinity;
+    let clusterIndex = -1;
+
+    for (let i = 0; i < centroids.length; i++) {
+      const distance = euclideanDistance(point, centroids[i]);
+      if (distance < minDistance) {
+        minDistance = distance;
+        clusterIndex = i;
+      }
+    }
+
+    return clusterIndex;
+  }
+
+  function calculateCentroids(clusters) {
+    const centroids = [];
+    for (let i = 0; i < clusters.length; i++) {
+      let sumGolsScored = 0;
+      let sumGolsConceded = 0;
+
+      for (let j = 0; j < clusters[i].length; j++) {
+        sumGolsScored += clusters[i][j].golsScored;
+        sumGolsConceded += clusters[i][j].golsConceded;
+      }
+
+      centroids.push({
+        golsScored: sumGolsScored / clusters[i].length,
+        golsConceded: sumGolsConceded / clusters[i].length
+      });
+    }
+
+    return centroids;
+  }
+
+  function hasConverged(oldCentroids, newCentroids) {
+    for (let i = 0; i < oldCentroids.length; i++) {
+      if (euclideanDistance(oldCentroids[i], newCentroids[i]) !== 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  let centroids = getRandomCentroids(data, k);
+  let iterations = 0;
+  let clusters = Array.from({ length: k }, () => []);
+
+  while (iterations < maxIterations) {
+    clusters = Array.from({ length: k }, () => []);
+
+    for (let i = 0; i < data.length; i++) {
+      const clusterIndex = assignToCluster(data[i], centroids);
+      clusters[clusterIndex].push(data[i]);
+    }
+
+    const oldCentroids = [...centroids];
+    centroids = calculateCentroids(clusters);
+
+    if (hasConverged(oldCentroids, centroids)) {
+      break;
+    }
+
+    iterations++;
+  }
+
+  return clusters;
+}
 // Functions 
-
-
 const addChampionship = (id, name, country) => {
   const existingChampionship = championships.find(championship => championship.name === name);
 
@@ -87,7 +179,7 @@ const fetchData = async (page) => {
     const response = await fetch(`https://soccer-football-info.p.rapidapi.com/championships/list/?p=${page}&c=all&l=en_US`, {
       method: 'GET',
       headers: {
-        'X-RapidAPI-Key': 'a6d4001f04mshb1b2dfdbb508facp1f0ed0jsn1299de137ebb',
+        'X-RapidAPI-Key': 'f43e6e5db1msh46b37900e14ad70p114c77jsnfd8f88b76023',
         'X-RapidAPI-Host': 'soccer-football-info.p.rapidapi.com'
       }
     });
@@ -189,7 +281,8 @@ $(document).ready(() => {
         }
     
         await Promise.all(workerPromises);
-        console.log('Dados de Todos os Times:', allTeamsData);
+        const clusters = kmeans(allTeamsData, numberOfClusters, maxIterations);
+        console.log(clusters);
       } catch (error) {
         console.error('Erro ao buscar dados das equipes:', error);
       }

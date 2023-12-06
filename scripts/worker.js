@@ -7,7 +7,7 @@ self.onmessage = async function (e) {
       const response = await fetch(`https://soccer-football-info.p.rapidapi.com/championships/view/?i=${championship.id}&l=en_US`, {
         method: 'GET',
         headers: {
-          'X-RapidAPI-Key': 'a6d4001f04mshb1b2dfdbb508facp1f0ed0jsn1299de137ebb',
+          'X-RapidAPI-Key': 'f43e6e5db1msh46b37900e14ad70p114c77jsnfd8f88b76023',
           'X-RapidAPI-Host': 'soccer-football-info.p.rapidapi.com'
         }
       });
@@ -25,7 +25,7 @@ self.onmessage = async function (e) {
             const teamResponse = await fetch(`https://soccer-football-info.p.rapidapi.com/teams/view/?i=${teamId}&l=en_US`, {
               method: 'GET',
               headers: {
-                'X-RapidAPI-Key': 'a6d4001f04mshb1b2dfdbb508facp1f0ed0jsn1299de137ebb',
+                'X-RapidAPI-Key': 'f43e6e5db1msh46b37900e14ad70p114c77jsnfd8f88b76023',
                 'X-RapidAPI-Host': 'soccer-football-info.p.rapidapi.com'
               }
             });
