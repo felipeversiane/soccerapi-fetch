@@ -2,9 +2,8 @@
 let currentPage = 1;
 let totalPages = 1;
 let championships = [];
-let teams = [];
-let numberOfClusters=3; // Você pode ajustar conforme necessário
-const maxIterations = 100; // Número máximo de iterações
+let numberOfClusters=3; 
+const maxIterations = 100; 
 
 
 
@@ -31,6 +30,8 @@ const displayClustersData = (clusters) => {
   });
 };
 
+
+// K-means Functions  
 
 function euclideanDistance(a, b) {
   return Math.sqrt(Math.pow(a.golsScored - b.golsScored, 2) + Math.pow(a.golsConceded - b.golsConceded, 2));
@@ -120,13 +121,15 @@ function kmeans(data, k, maxIterations) {
 
   return clusters;
 }
-// Functions 
+
+// Basic Functions  
 const addChampionship = (id, name, country) => {
   const existingChampionship = championships.find(championship => championship.name === name);
 
   if (!existingChampionship) {
       championships.push({ id, name, country });
       addTable();
+      clearResponseTable();
       toggleSearchButton();
       console.log('Lista de Ligas:', championships);
   } else {
@@ -137,6 +140,7 @@ const addChampionship = (id, name, country) => {
 const removeChampionship = (name) => {
   championships = championships.filter(championship => championship.name !== name);
   addTable();
+  clearResponseTable();
   toggleSearchButton();
   console.log('Lista de Ligas após remoção:', championships);
 };
@@ -257,6 +261,33 @@ const handleWorkerTask = async (championship) => {
   });
 };
 
+const handleSearchButton = async () => {
+  try {
+    let allTeamsData = [];
+    const workerPromises = [];
+
+    for (const championship of championships) {
+      workerPromises.push(handleWorkerTask(championship).catch(error => {
+        console.error('Erro ao buscar dados das equipes:', error);
+      }));
+    }
+
+    const resolvedWorkerPromises = await Promise.all(workerPromises);
+
+    for (const teamsData of resolvedWorkerPromises) {
+      if (teamsData) {
+        allTeamsData.push(teamsData);
+      }
+    }
+
+    const clusters = kmeans(allTeamsData.flat(), numberOfClusters, maxIterations);
+    displayClustersData(clusters);
+    console.log(clusters);
+  } catch (error) {
+    console.error('Erro ao buscar dados das equipes:', error);
+  }
+};
+
 const clearResponseTable = () => {
   const tbody = $('.response-box tbody');
   tbody.html('');
@@ -266,17 +297,6 @@ const clearResponseTable = () => {
 
 
 // EVENTS LISTENERS
-$('#rangeInput').on('input', function () {
-  const inputValue = parseInt($(this).val(), 10);
-  
-  
-  const validValue = Math.min(Math.max(inputValue, 1), 6);
-
- 
-  numberOfClusters = validValue;
-
-  $(this).val(validValue);
-});
 $(document).ready(() => {
     fetchData(currentPage)
       .then(updatePageNumber)
@@ -303,31 +323,7 @@ $(document).ready(() => {
     $('#prevButton').on('click', previousPage);
     
     $('#searchButton').on('click', async function () {
-      try {
-        let allTeamsData = [];  // Array para armazenar todos os dados de todas as ligas
-        const workerPromises = [];
-    
-        for (const championship of championships) {
-          const teamsData = await handleWorkerTask(championship).catch(error => {
-            console.error('Erro ao buscar dados das equipes:', error);
-          });
-    
-          if (teamsData) {
-            allTeamsData.push(teamsData);  // Adiciona os dados da liga atual ao array
-          }
-    
-          workerPromises.push(teamsData);
-        }
-    
-    
-    
-        // Utiliza a variável numberOfClusters como parâmetro em kmeans
-        const clusters = kmeans(allTeamsData.flat(), numberOfClusters, maxIterations);
-        displayClustersData(clusters);
-        console.log(clusters);
-      } catch (error) {
-        console.error('Erro ao buscar dados das equipes:', error);
-      }
+      await handleSearchButton();
     });
     
   });

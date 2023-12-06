@@ -1,6 +1,5 @@
-// worker.js
-
 self.onmessage = async function (e) {
+  console.log("Worker rodando!")
   const championship = e.data;
 
   try {
@@ -15,7 +14,16 @@ self.onmessage = async function (e) {
     const responseData = await response.json();
     const teamsData = [];
 
-    if (responseData.result && responseData.result[0] && responseData.result[0].seasons && responseData.result[0].seasons[0] && responseData.result[0].seasons[0].groups && responseData.result[0].seasons[0].groups[0] && responseData.result[0].seasons[0].groups[0].table) {
+    if (
+      responseData &&
+      responseData.result &&
+      responseData.result.length > 0 &&
+      responseData.result[0].seasons &&
+      responseData.result[0].seasons.length > 0 &&
+      responseData.result[0].seasons[0].groups &&
+      responseData.result[0].seasons[0].groups.length > 0 &&
+      responseData.result[0].seasons[0].groups[0].table
+    ) {
       const table = responseData.result[0].seasons[0].groups[0].table;
 
       for (const teamInfo of table) {
@@ -31,14 +39,20 @@ self.onmessage = async function (e) {
           });
 
           const teamData = await teamResponse.json();
+
           let golsScored = 0;
           let golsConceded = 0;
 
-          if (teamData.result && teamData.result[0] && teamData.result[0].last_matches) {
+          if (
+            teamData &&
+            teamData.result &&
+            teamData.result.length > 0 &&
+            teamData.result[0].last_matches
+          ) {
             const matches = teamData.result[0].last_matches;
 
             for (const matchInfo of matches) {
-              if (matchInfo.teamA && matchInfo.teamB) {
+              if (matchInfo.teamA && matchInfo.teamB && !isNaN(parseInt(matchInfo.teamA.score)) && !isNaN(parseInt(matchInfo.teamB.score))) {
                 golsScored += parseInt(matchInfo.teamA.score);
                 golsConceded += parseInt(matchInfo.teamB.score);
               }
@@ -57,8 +71,9 @@ self.onmessage = async function (e) {
     }
 
     self.postMessage(teamsData);
+    console.log("Worker finalizado!")
   } catch (error) {
     console.error('Erro ao buscar dados das equipes:', error);
-    throw error;
+    self.postMessage({ error: 'Ocorreu um erro ao buscar os dados das equipes.' });
   }
 };
