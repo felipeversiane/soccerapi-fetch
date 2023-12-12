@@ -22,8 +22,7 @@ const displayClustersData = (clusters) => {
       const row = $('<tr>').addClass('hover:bg-gray-500');
       const nameCell = $('<td>').addClass('py-2 text-center').text(team.teamName);
       const countryCell = $('<td>').addClass('py-2 text-center').text(team.teamCountry || 'N/A');
-      const matchesCell = $('<td>').addClass('py-2 text-center').text(team.matches.join(', ')); // Join matches with a separator
-
+      const matchesCell = $('<td>').addClass('py-2 text-center').text(team.matches.join(', '));
       row.append(nameCell, countryCell, matchesCell);
       tbody.append(row);
     });
@@ -114,13 +113,14 @@ const addChampionship = (id, name, country) => {
 const removeChampionship = (name) => {
   championships = championships.filter(championship => championship.name !== name);
   addTable();
+  clearResponseTable();
   toggleSearchButton();
   console.log('Lista de Ligas após remoção:', championships);
 };
 
 const addTable = () => {
   const tbody = $('.intermediate-box tbody');
-  tbody.html('');
+  tbody.html(''); 
   championships.forEach(championship => {
       const row = $('<tr>').addClass('hover:bg-gray-500');
       const nameCell = $('<td>').addClass('py-2 font-bold text-center').text(championship.name);
@@ -239,11 +239,51 @@ const clearResponseTable = () => {
   tbody.html('');
 };
 
+const handleSearchButton = async () => {
+  try {
+    let allTeamsData = [];
+    const workerPromises = [];
 
+    for (const championship of championships) {
+      const workerPromise = new Promise((resolve, reject) => {
+        const worker = new Worker('./scripts/fetchWorker.js');
+        worker.postMessage(championship);
+
+        worker.onmessage = (e) => {
+          const teamsData = e.data;
+          console.log('Times da Liga:', teamsData);
+          resolve(teamsData);
+        };
+
+        worker.onerror = (error) => {
+          console.error('Erro no worker:', error);
+          reject(error);
+        };
+      });
+
+      workerPromises.push(workerPromise);
+    }
+
+    const teamsDataResults = await Promise.all(workerPromises);
+
+    for (const teamsData of teamsDataResults) {
+      if (teamsData) {
+        allTeamsData.push(teamsData);
+      }
+    }
+
+    const clusters = kmeans(allTeamsData.flat(), numberOfClusters, maxIterations);
+    displayClustersData(clusters);
+    console.log(clusters);
+  } catch (error) {
+    console.error('Erro ao buscar dados das equipes:', error);
+  }
+};
 
 
 // EVENTS LISTENERSS
 $(document).ready(() => {
+
     fetchData(currentPage)
       .then(updatePageNumber)
       .catch(error => console.error(error));
@@ -262,36 +302,11 @@ $(document).ready(() => {
       const name = row.find('td:nth-child(1)').text();
       
       removeChampionship(name);
-      clearResponseTable();
     });
   
     $('#nextButton').on('click', nextPage);
     $('#prevButton').on('click', previousPage);
     
-    $('#searchButton').on('click', async function () {
-      try {
-        let allTeamsData = []; 
-        const workerPromises = [];
-    
-        for (const championship of championships) {
-          const teamsData = await handleWorkerTask(championship).catch(error => {
-            console.error('Erro ao buscar dados das equipes:', error);
-          });
-    
-          if (teamsData) {
-            allTeamsData.push(teamsData);  
-          }
-    
-          workerPromises.push(teamsData);
-        }
-    
-    
-        const clusters = kmeans(allTeamsData.flat(), numberOfClusters, maxIterations);
-        displayClustersData(clusters);
-        console.log(clusters);
-      } catch (error) {
-        console.error('Erro ao buscar dados das equipes:', error);
-      }
-    });
+    $('#searchButton').on('click', handleSearchButton);
     
   });

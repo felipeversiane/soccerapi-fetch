@@ -1,5 +1,7 @@
 
 self.onmessage = async function (e) {
+
+  console.log("Worker started!")
   const championship = e.data;
 
   try {
@@ -52,7 +54,7 @@ self.onmessage = async function (e) {
         }
       }
     }
-
+    console.log("Worker finished!")
     self.postMessage(teamsData);
   } catch (error) {
     console.error('Erro ao buscar dados das equipes:', error);
