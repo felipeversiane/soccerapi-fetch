@@ -2,6 +2,7 @@
 let currentPage = 1;
 let totalPages = 1;
 let championships = [];
+let teams = [];
 let numberOfClusters=3; 
 const maxIterations = 100; 
 
@@ -21,36 +22,24 @@ const displayClustersData = (clusters) => {
       const row = $('<tr>').addClass('hover:bg-gray-500');
       const nameCell = $('<td>').addClass('py-2 text-center').text(team.teamName);
       const countryCell = $('<td>').addClass('py-2 text-center').text(team.teamCountry || 'N/A');
-      const concededCell = $('<td>').addClass('py-2 text-center').text(team.golsConceded);
-      const scoredCell = $('<td>').addClass('py-2 text-center').text(team.golsScored);
+      const matchesCell = $('<td>').addClass('py-2 text-center').text(team.matches.join(', ')); // Join matches with a separator
 
-      row.append(nameCell, countryCell, concededCell, scoredCell);
+      row.append(nameCell, countryCell, matchesCell);
       tbody.append(row);
     });
   });
 };
 
 
-// K-means Functions  
 
-function euclideanDistance(a, b) {
-  return Math.sqrt(Math.pow(a.golsScored - b.golsScored, 2) + Math.pow(a.golsConceded - b.golsConceded, 2));
-}
-
+// Kmean Functions
 function kmeans(data, k, maxIterations) {
-  function getRandomCentroids(data, k) {
-    const centroids = [];
-    const randomIndices = [];
-
-    while (centroids.length < k) {
-      const randomIndex = Math.floor(Math.random() * data.length);
-      if (!randomIndices.includes(randomIndex)) {
-        randomIndices.push(randomIndex);
-        centroids.push(data[randomIndex]);
-      }
+  function euclideanDistance(a, b) {
+    let distance = 0;
+    for (let i = 0; i < a.length; i++) {
+      distance += Math.pow(a[i] - b[i], 2);
     }
-
-    return centroids;
+    return Math.sqrt(distance);
   }
 
   function assignToCluster(point, centroids) {
@@ -58,7 +47,7 @@ function kmeans(data, k, maxIterations) {
     let clusterIndex = -1;
 
     for (let i = 0; i < centroids.length; i++) {
-      const distance = euclideanDistance(point, centroids[i]);
+      const distance = euclideanDistance(point.matches, centroids[i]);
       if (distance < minDistance) {
         minDistance = distance;
         clusterIndex = i;
@@ -68,36 +57,11 @@ function kmeans(data, k, maxIterations) {
     return clusterIndex;
   }
 
-  function calculateCentroids(clusters) {
-    const centroids = [];
-    for (let i = 0; i < clusters.length; i++) {
-      let sumGolsScored = 0;
-      let sumGolsConceded = 0;
-
-      for (let j = 0; j < clusters[i].length; j++) {
-        sumGolsScored += clusters[i][j].golsScored;
-        sumGolsConceded += clusters[i][j].golsConceded;
-      }
-
-      centroids.push({
-        golsScored: sumGolsScored / clusters[i].length,
-        golsConceded: sumGolsConceded / clusters[i].length
-      });
-    }
-
-    return centroids;
+  let centroids = [];
+  for (let i = 0; i < k; i++) {
+    centroids.push(data[i].matches); 
   }
 
-  function hasConverged(oldCentroids, newCentroids) {
-    for (let i = 0; i < oldCentroids.length; i++) {
-      if (euclideanDistance(oldCentroids[i], newCentroids[i]) !== 0) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  let centroids = getRandomCentroids(data, k);
   let iterations = 0;
   let clusters = Array.from({ length: k }, () => []);
 
@@ -108,11 +72,21 @@ function kmeans(data, k, maxIterations) {
       const clusterIndex = assignToCluster(data[i], centroids);
       clusters[clusterIndex].push(data[i]);
     }
-
     const oldCentroids = [...centroids];
-    centroids = calculateCentroids(clusters);
-
-    if (hasConverged(oldCentroids, centroids)) {
+    for (let i = 0; i < k; i++) {
+      if (clusters[i].length > 0) {
+        const matchesSum = clusters[i].reduce((acc, team) => acc.map((val, idx) => val + team.matches[idx]), [0, 0, 0, 0, 0]);
+        centroids[i] = matchesSum.map(val => val / clusters[i].length);
+      }
+    }
+    let converged = true;
+    for (let i = 0; i < k; i++) {
+      if (euclideanDistance(oldCentroids[i], centroids[i]) !== 0) {
+        converged = false;
+        break;
+      }
+    }
+    if (converged) {
       break;
     }
 
@@ -122,15 +96,15 @@ function kmeans(data, k, maxIterations) {
   return clusters;
 }
 
-// Basic Functions  
+// Functions 
 const addChampionship = (id, name, country) => {
   const existingChampionship = championships.find(championship => championship.name === name);
 
   if (!existingChampionship) {
       championships.push({ id, name, country });
       addTable();
-      clearResponseTable();
       toggleSearchButton();
+      clearResponseTable();
       console.log('Lista de Ligas:', championships);
   } else {
       console.log('Championship já existe:', existingChampionship);
@@ -140,7 +114,6 @@ const addChampionship = (id, name, country) => {
 const removeChampionship = (name) => {
   championships = championships.filter(championship => championship.name !== name);
   addTable();
-  clearResponseTable();
   toggleSearchButton();
   console.log('Lista de Ligas após remoção:', championships);
 };
@@ -261,33 +234,6 @@ const handleWorkerTask = async (championship) => {
   });
 };
 
-const handleSearchButton = async () => {
-  try {
-    let allTeamsData = [];
-    const workerPromises = [];
-
-    for (const championship of championships) {
-      workerPromises.push(handleWorkerTask(championship).catch(error => {
-        console.error('Erro ao buscar dados das equipes:', error);
-      }));
-    }
-
-    const resolvedWorkerPromises = await Promise.all(workerPromises);
-
-    for (const teamsData of resolvedWorkerPromises) {
-      if (teamsData) {
-        allTeamsData.push(teamsData);
-      }
-    }
-
-    const clusters = kmeans(allTeamsData.flat(), numberOfClusters, maxIterations);
-    displayClustersData(clusters);
-    console.log(clusters);
-  } catch (error) {
-    console.error('Erro ao buscar dados das equipes:', error);
-  }
-};
-
 const clearResponseTable = () => {
   const tbody = $('.response-box tbody');
   tbody.html('');
@@ -296,7 +242,7 @@ const clearResponseTable = () => {
 
 
 
-// EVENTS LISTENERS
+// EVENTS LISTENERSS
 $(document).ready(() => {
     fetchData(currentPage)
       .then(updatePageNumber)
@@ -323,7 +269,29 @@ $(document).ready(() => {
     $('#prevButton').on('click', previousPage);
     
     $('#searchButton').on('click', async function () {
-      await handleSearchButton();
+      try {
+        let allTeamsData = []; 
+        const workerPromises = [];
+    
+        for (const championship of championships) {
+          const teamsData = await handleWorkerTask(championship).catch(error => {
+            console.error('Erro ao buscar dados das equipes:', error);
+          });
+    
+          if (teamsData) {
+            allTeamsData.push(teamsData);  
+          }
+    
+          workerPromises.push(teamsData);
+        }
+    
+    
+        const clusters = kmeans(allTeamsData.flat(), numberOfClusters, maxIterations);
+        displayClustersData(clusters);
+        console.log(clusters);
+      } catch (error) {
+        console.error('Erro ao buscar dados das equipes:', error);
+      }
     });
     
   });
