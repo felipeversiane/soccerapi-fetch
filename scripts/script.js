@@ -215,29 +215,12 @@ const fetchData = async (page) => {
 };
 
 
-const handleWorkerTask = async (championship) => {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker('./scripts/fetchWorker.js');
-
-    worker.postMessage(championship);
-
-    worker.onmessage = (e) => {
-      const teamsData = e.data;
-      console.log('Times da Liga:', teamsData);
-      resolve(teamsData);
-    };
-
-    worker.onerror = (error) => {
-      console.error('Erro no worker:', error);
-      reject(error);
-    };
-  });
-};
-
 const clearResponseTable = () => {
   const tbody = $('.response-box tbody');
   tbody.html('');
 };
+
+
 
 const handleSearchButton = async () => {
   try {
@@ -279,6 +262,7 @@ const handleSearchButton = async () => {
     console.error('Erro ao buscar dados das equipes:', error);
   }
 };
+
 
 
 // EVENTS LISTENERSS

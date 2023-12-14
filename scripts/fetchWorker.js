@@ -2,8 +2,7 @@
 self.onmessage = async function (e) {
 
   console.log("Worker started!")
-  const championship = e.data;
-
+  const championship  = e.data;
   try {
     const response = await fetch(`https://soccer-football-info.p.rapidapi.com/championships/view/?i=${championship.id}&l=en_US`, {
       method: 'GET',
@@ -55,6 +54,7 @@ self.onmessage = async function (e) {
       }
     }
     console.log("Worker finished!")
+
     self.postMessage(teamsData);
   } catch (error) {
     console.error('Erro ao buscar dados das equipes:', error);
